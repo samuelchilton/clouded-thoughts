@@ -1,35 +1,69 @@
 import './style.css';
 import { Cloud, createRandomCloud } from './cloud';
-import { handleWallCollisions } from './physics';
+import { handleWallCollisions, handleBlockCollisions, BlockBounds } from './physics';
 
 const NUM_CLOUDS = 3;
 
 class CloudedThoughts {
   private clouds: Cloud[] = [];
   private sky: HTMLElement;
-  private viewportWidth: number;
-  private viewportHeight: number;
+  private viewport: HTMLElement;
+  private canvasWidth: number;
+  private canvasHeight: number;
+  private blockElements: HTMLElement[] = [];
+
+  // Panning state
+  private panX: number = 0;
+  private panY: number = 0;
+  private isPanning: boolean = false;
+  private panStartX: number = 0;
+  private panStartY: number = 0;
 
   constructor() {
     const skyElement = document.getElementById('sky');
-    if (!skyElement) {
-      throw new Error('Sky element not found');
+    const viewportElement = document.getElementById('viewport');
+    if (!skyElement || !viewportElement) {
+      throw new Error('Required elements not found');
     }
     this.sky = skyElement;
-    this.viewportWidth = window.innerWidth;
-    this.viewportHeight = window.innerHeight;
+    this.viewport = viewportElement;
+
+    // Canvas is 3x viewport size
+    this.canvasWidth = window.innerWidth * 3;
+    this.canvasHeight = window.innerHeight * 3;
+
+    // Start centered (offset by one viewport)
+    this.panX = -window.innerWidth;
+    this.panY = -window.innerHeight;
+    this.updatePan();
 
     this.init();
+    this.setupPanning();
+    this.setupRecenterButton();
     this.setupResizeHandler();
     this.startAnimationLoop();
   }
 
+  private setupRecenterButton(): void {
+    const btn = document.getElementById('recenter-btn');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        this.panX = -window.innerWidth;
+        this.panY = -window.innerHeight;
+        this.updatePan();
+      });
+    }
+  }
+
   private init(): void {
-    // Create clouds
+    // Collect all block elements
+    this.blockElements = Array.from(document.querySelectorAll('.block')) as HTMLElement[];
+
+    // Create clouds spread across the larger canvas
     for (let i = 0; i < NUM_CLOUDS; i++) {
       const cloud = createRandomCloud(
-        this.viewportWidth,
-        this.viewportHeight,
+        this.canvasWidth,
+        this.canvasHeight,
         this.clouds
       );
       this.clouds.push(cloud);
@@ -37,18 +71,80 @@ class CloudedThoughts {
     }
   }
 
+  private getBlockBounds(): BlockBounds[] {
+    return this.blockElements.map(block => {
+      const rect = block.getBoundingClientRect();
+      // Convert from viewport coordinates to canvas coordinates
+      return {
+        left: rect.left - this.panX,
+        right: rect.right - this.panX,
+        top: rect.top - this.panY,
+        bottom: rect.bottom - this.panY
+      };
+    });
+  }
+
+  private setupPanning(): void {
+    this.viewport.addEventListener('mousedown', (e: MouseEvent) => {
+      // Only pan if clicking on the viewport/sky, not on a cloud
+      if ((e.target as HTMLElement).id === 'viewport' || (e.target as HTMLElement).id === 'sky') {
+        this.isPanning = true;
+        this.panStartX = e.clientX - this.panX;
+        this.panStartY = e.clientY - this.panY;
+        this.viewport.classList.add('panning');
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener('mousemove', (e: MouseEvent) => {
+      if (this.isPanning) {
+        this.panX = e.clientX - this.panStartX;
+        this.panY = e.clientY - this.panStartY;
+
+        // Clamp panning to canvas bounds
+        const maxPanX = 0;
+        const minPanX = -(this.canvasWidth - window.innerWidth);
+        const maxPanY = 0;
+        const minPanY = -(this.canvasHeight - window.innerHeight);
+
+        this.panX = Math.max(minPanX, Math.min(maxPanX, this.panX));
+        this.panY = Math.max(minPanY, Math.min(maxPanY, this.panY));
+
+        this.updatePan();
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (this.isPanning) {
+        this.isPanning = false;
+        this.viewport.classList.remove('panning');
+      }
+    });
+  }
+
+  private updatePan(): void {
+    this.sky.style.transform = `translate(${this.panX}px, ${this.panY}px)`;
+  }
+
   private setupResizeHandler(): void {
     window.addEventListener('resize', () => {
-      this.viewportWidth = window.innerWidth;
-      this.viewportHeight = window.innerHeight;
+      this.canvasWidth = window.innerWidth * 3;
+      this.canvasHeight = window.innerHeight * 3;
+
+      // Reclamp pan position
+      const minPanX = -(this.canvasWidth - window.innerWidth);
+      const minPanY = -(this.canvasHeight - window.innerHeight);
+      this.panX = Math.max(minPanX, Math.min(0, this.panX));
+      this.panY = Math.max(minPanY, Math.min(0, this.panY));
+      this.updatePan();
 
       // Ensure clouds stay within bounds after resize
       for (const cloud of this.clouds) {
-        if (cloud.x + cloud.width > this.viewportWidth) {
-          cloud.x = this.viewportWidth - cloud.width;
+        if (cloud.x + cloud.width > this.canvasWidth) {
+          cloud.x = this.canvasWidth - cloud.width;
         }
-        if (cloud.y + cloud.height > this.viewportHeight) {
-          cloud.y = this.viewportHeight - cloud.height;
+        if (cloud.y + cloud.height > this.canvasHeight) {
+          cloud.y = this.canvasHeight - cloud.height;
         }
         cloud.updatePosition();
       }
@@ -57,6 +153,8 @@ class CloudedThoughts {
 
   private startAnimationLoop(): void {
     const animate = (): void => {
+      const blockBounds = this.getBlockBounds();
+
       for (const cloud of this.clouds) {
         // Skip physics for clouds being dragged
         if (cloud.isDragging) continue;
@@ -64,8 +162,11 @@ class CloudedThoughts {
         // Update position
         cloud.update();
 
-        // Handle wall collisions
-        handleWallCollisions(cloud, this.viewportWidth, this.viewportHeight);
+        // Handle wall collisions (use canvas size, not viewport)
+        handleWallCollisions(cloud, this.canvasWidth, this.canvasHeight);
+
+        // Handle block collisions
+        handleBlockCollisions(cloud, blockBounds);
 
         // Update DOM position
         cloud.updatePosition();

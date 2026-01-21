@@ -1,5 +1,12 @@
 import { Cloud } from './cloud';
 
+export interface BlockBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 export function handleWallCollisions(
   cloud: Cloud,
   viewportWidth: number,
@@ -95,6 +102,45 @@ export function handleCloudCollisions(clouds: Cloud[]): void {
           cloudA.vy = cloudB.vy;
           cloudB.vy = tempVy;
         }
+      }
+    }
+  }
+}
+
+export function handleBlockCollisions(cloud: Cloud, blocks: BlockBounds[]): void {
+  const cloudBounds = cloud.getBounds();
+
+  for (const block of blocks) {
+    // Check if cloud overlaps with block
+    const overlapsX = cloudBounds.left < block.right && cloudBounds.right > block.left;
+    const overlapsY = cloudBounds.top < block.bottom && cloudBounds.bottom > block.top;
+
+    if (overlapsX && overlapsY) {
+      // Calculate overlap amounts from each side
+      const overlapLeft = cloudBounds.right - block.left;
+      const overlapRight = block.right - cloudBounds.left;
+      const overlapTop = cloudBounds.bottom - block.top;
+      const overlapBottom = block.bottom - cloudBounds.top;
+
+      // Find minimum overlap to determine collision side
+      const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+      if (minOverlap === overlapLeft) {
+        // Cloud hit left side of block
+        cloud.x = block.left - cloud.width;
+        cloud.vx = -Math.abs(cloud.vx);
+      } else if (minOverlap === overlapRight) {
+        // Cloud hit right side of block
+        cloud.x = block.right;
+        cloud.vx = Math.abs(cloud.vx);
+      } else if (minOverlap === overlapTop) {
+        // Cloud hit top side of block
+        cloud.y = block.top - cloud.height;
+        cloud.vy = -Math.abs(cloud.vy);
+      } else {
+        // Cloud hit bottom side of block
+        cloud.y = block.bottom;
+        cloud.vy = Math.abs(cloud.vy);
       }
     }
   }
