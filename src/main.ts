@@ -2,7 +2,7 @@ import './style.css';
 import { Cloud, createRandomCloud } from './cloud';
 import { handleWallCollisions, handleBlockCollisions, BlockBounds } from './physics';
 
-const NUM_CLOUDS = 3;
+const NUM_CLOUDS = 10;
 
 class CloudedThoughts {
   private clouds: Cloud[] = [];
