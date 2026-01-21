@@ -1,0 +1,15 @@
+{
+  "name": "clouded-thoughts",
+  "version": "1.0.0",
+  "description": "Floating, colliding clouds on a sky blue background",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
+  }
+}
