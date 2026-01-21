@@ -6,6 +6,9 @@ export class Cloud {
   width: number;
   height: number;
   element: HTMLElement;
+  isDragging: boolean = false;
+  private dragOffsetX: number = 0;
+  private dragOffsetY: number = 0;
 
   constructor(x: number, y: number, vx: number, vy: number) {
     this.x = x;
@@ -19,6 +22,7 @@ export class Cloud {
     this.element.className = 'cloud';
     this.element.style.width = `${this.width}px`;
     this.element.style.height = `${this.height}px`;
+    this.element.style.cursor = 'grab';
 
     // Main cloud body
     const body = document.createElement('div');
@@ -39,7 +43,33 @@ export class Cloud {
     text.textContent = 'I am a cloud';
     this.element.appendChild(text);
 
+    this.setupDragging();
     this.updatePosition();
+  }
+
+  private setupDragging(): void {
+    this.element.addEventListener('mousedown', (e: MouseEvent) => {
+      this.isDragging = true;
+      this.dragOffsetX = e.clientX - this.x;
+      this.dragOffsetY = e.clientY - this.y;
+      this.element.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e: MouseEvent) => {
+      if (this.isDragging) {
+        this.x = e.clientX - this.dragOffsetX;
+        this.y = e.clientY - this.dragOffsetY;
+        this.updatePosition();
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (this.isDragging) {
+        this.isDragging = false;
+        this.element.style.cursor = 'grab';
+      }
+    });
   }
 
   updatePosition(): void {

@@ -1,6 +1,6 @@
 import './style.css';
 import { Cloud, createRandomCloud } from './cloud';
-import { handleWallCollisions, handleCloudCollisions } from './physics';
+import { handleWallCollisions } from './physics';
 
 const NUM_CLOUDS = 3;
 
@@ -57,19 +57,17 @@ class CloudedThoughts {
 
   private startAnimationLoop(): void {
     const animate = (): void => {
-      // Update positions
       for (const cloud of this.clouds) {
+        // Skip physics for clouds being dragged
+        if (cloud.isDragging) continue;
+
+        // Update position
         cloud.update();
-      }
 
-      // Handle collisions
-      for (const cloud of this.clouds) {
+        // Handle wall collisions
         handleWallCollisions(cloud, this.viewportWidth, this.viewportHeight);
-      }
-      handleCloudCollisions(this.clouds);
 
-      // Update DOM positions
-      for (const cloud of this.clouds) {
+        // Update DOM position
         cloud.updatePosition();
       }
 
