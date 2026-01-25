@@ -2,7 +2,11 @@ import './style.css';
 import { Cloud, createRandomCloud } from './cloud';
 import { handleWallCollisions, handleBlockCollisions, BlockBounds } from './physics';
 
-const NUM_CLOUDS = 10;
+const THOUGHTS_API_URL = 'https://clouded-thoughts-backend-production.up.railway.app/thoughts';
+
+interface Thought {
+  thought: string;
+}
 
 class CloudedThoughts {
   private clouds: Cloud[] = [];
@@ -55,19 +59,27 @@ class CloudedThoughts {
     }
   }
 
-  private init(): void {
+  private async init(): Promise<void> {
     // Collect all block elements
     this.blockElements = Array.from(document.querySelectorAll('.block')) as HTMLElement[];
 
-    // Create clouds spread across the larger canvas
-    for (let i = 0; i < NUM_CLOUDS; i++) {
-      const cloud = createRandomCloud(
-        this.canvasWidth,
-        this.canvasHeight,
-        this.clouds
-      );
-      this.clouds.push(cloud);
-      this.sky.appendChild(cloud.element);
+    // Fetch thoughts from the API and create clouds
+    try {
+      const response = await fetch(THOUGHTS_API_URL);
+      const thoughts: Thought[] = await response.json();
+
+      for (const thought of thoughts) {
+        const cloud = createRandomCloud(
+          this.canvasWidth,
+          this.canvasHeight,
+          this.clouds,
+          thought.thought
+        );
+        this.clouds.push(cloud);
+        this.sky.appendChild(cloud.element);
+      }
+    } catch (error) {
+      console.error('Failed to fetch thoughts:', error);
     }
   }
 

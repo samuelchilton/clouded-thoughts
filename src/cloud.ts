@@ -10,7 +10,7 @@ export class Cloud {
   private dragOffsetX: number = 0;
   private dragOffsetY: number = 0;
 
-  constructor(x: number, y: number, vx: number, vy: number) {
+  constructor(x: number, y: number, vx: number, vy: number, text: string = 'I am a cloud') {
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -38,10 +38,10 @@ export class Cloud {
     }
 
     // Text
-    const text = document.createElement('span');
-    text.className = 'cloud-text';
-    text.textContent = 'I am a cloud';
-    this.element.appendChild(text);
+    const textEl = document.createElement('span');
+    textEl.className = 'cloud-text';
+    textEl.textContent = text;
+    this.element.appendChild(textEl);
 
     this.setupDragging();
     this.updatePosition();
@@ -95,7 +95,8 @@ export class Cloud {
 export function createRandomCloud(
   viewportWidth: number,
   viewportHeight: number,
-  existingClouds: Cloud[]
+  existingClouds: Cloud[],
+  text?: string
 ): Cloud {
   const cloudWidth = 600;
   const cloudHeight = 480;
@@ -126,5 +127,5 @@ export function createRandomCloud(
   const vx = Math.cos(angle) * speed;
   const vy = Math.sin(angle) * speed;
 
-  return new Cloud(x, y, vx, vy);
+  return new Cloud(x, y, vx, vy, text);
 }
