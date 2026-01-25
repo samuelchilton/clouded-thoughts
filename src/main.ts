@@ -191,5 +191,44 @@ class CloudedThoughts {
   }
 }
 
-// Start the app
-new CloudedThoughts();
+// Handle splash screen
+function setupSplash(): void {
+  const splash = document.getElementById('splash');
+  const input = document.getElementById('thought-input') as HTMLInputElement;
+  const button = document.getElementById('submit-thought') as HTMLButtonElement;
+
+  if (!splash || !input || !button) return;
+
+  // Enable/disable button based on input
+  input.addEventListener('input', () => {
+    button.disabled = input.value.trim().length === 0;
+  });
+
+  // Handle form submission
+  button.addEventListener('click', async () => {
+    const thought = input.value.trim();
+    if (!thought) return;
+
+    button.disabled = true;
+    button.textContent = 'Submitting...';
+
+    try {
+      await fetch(THOUGHTS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ thought }),
+      });
+    } catch (error) {
+      console.error('Failed to submit thought:', error);
+    }
+
+    // Hide splash and start app
+    splash.classList.add('hidden');
+    new CloudedThoughts();
+  });
+}
+
+// Start with splash
+setupSplash();
